@@ -5,6 +5,7 @@ import QtQuick.Dialogs
 
 GridLayout {
     property string providerName
+    property string rgbColor: "0,0,0"
 
     columns: 2
     rows: 2
@@ -18,7 +19,7 @@ GridLayout {
         Layout.preferredHeight: 200
         Layout.preferredWidth: 200
 
-        source: "image://" + providerName +"/MImage"
+        source: "image://" + providerName + "/" + rgbColor + "/MImage"
 
         Rectangle {
             color: "transparent"

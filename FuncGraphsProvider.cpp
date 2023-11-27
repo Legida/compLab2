@@ -14,10 +14,11 @@ FuncGraphsProvider::FuncGraphsProvider(QString name, int xSide, int ySide, RFunc
     , m_xSide(xSide)
     , m_ySide(ySide)
     , m_name(name)
+    , m_rgbColor("0,0,0")
 {
-    rect.resize(_imageHeight);
+    m_rect.resize(_imageHeight);
     #pragma omp parallel for
-    for (auto& el : rect)
+    for (auto& el : m_rect)
     {
         el.resize(_imageWidth);
     }
@@ -26,23 +27,34 @@ FuncGraphsProvider::FuncGraphsProvider(QString name, int xSide, int ySide, RFunc
 
 FuncGraphsProvider::FuncGraphsProvider(FuncGraphsProvider&& other)
     : QQuickImageProvider(QQuickImageProvider::Image)
-    , rect(std::move(other.rect))
+    , m_rect(std::move(other.m_rect))
     , rfunc(std::move(other.rfunc))
     , m_xSide(std::move(other.m_xSide))
     , m_ySide(std::move(other.m_ySide))
     , m_name(std::move(other.m_name))
+    , m_rgbColor(std::move(other.m_rgbColor))
 {
 }
 
 QImage FuncGraphsProvider::requestImage(const QString& id, QSize* size, const QSize& requestedSize)
 {
+    auto splitRes = id.split("/");
+    if (splitRes.size() < 1)
+    {
+        return QImage();
+    }
+
     if (size)
     {
         *size = QSize(_imageWidth, _imageHeight);
     }
 
-    if (id == "MImage")
+    if (splitRes.back() == "MImage")
     {
+        if (splitRes.size() == 2)
+        {
+            m_rgbColor = splitRes[0];
+        }
         return requestMImage();
     }
     else if (id == "x")
@@ -79,8 +91,14 @@ QImage FuncGraphsProvider::requestMImage()
 {
     QImage image(_imageWidth, _imageHeight, QImage::Format_RGB32);
 
+    QRgb negativeColor = QColor(QColorConstants::Svg::mediumblue).rgb();
+    const auto sp = m_rgbColor.split(",");
+    if (sp.size() >= 3)
+    {
+        negativeColor = QColor(sp[0].toInt(), sp[1].toInt(), sp[2].toInt()).rgb();
+    }
+
     const QRgb positiveColor = QColor(Qt::white).rgb();
-    const QRgb negativeColor = QColor(QColorConstants::Svg::mediumblue).rgb();
 
     #pragma omp parallel for
     for (int i = 0; i < _imageHeight; ++i)
@@ -89,7 +107,7 @@ QImage FuncGraphsProvider::requestMImage()
 
         for (int j = 0; j < _imageWidth; ++j)
         {
-            rect[j][i].z >= 0.f ? row[j] = positiveColor : row[j] = negativeColor;
+            m_rect[j][i].z >= 0.f ? row[j] = positiveColor : row[j] = negativeColor;
         }
     }
 
@@ -107,38 +125,17 @@ QImage FuncGraphsProvider::requestComponent(EComponents component)
 
         for (int j = 0; j< _imageWidth; ++j)
         {
-            const float x1 = static_cast<float>(j-_imageWidth/2)/m_xSide;
-            const float y1 = static_cast<float>(i-_imageHeight/2)/m_ySide;
-            const float z1 = rect[j][i].z;
-
-            const int j2 = j < (_imageWidth - 1) ? (j + 1) : (j - 1);
-            const float x2 = static_cast<float>(j2-_imageWidth/2)/m_xSide;
-            const float y2 = static_cast<float>(i-_imageHeight/2)/m_ySide;
-            const float z2 = rect[j2][i].z;
-
-            const int i3 = i < (_imageHeight - 1) ? (i + 1) : (i - 1);
-            const float x3 = static_cast<float>(j-_imageWidth/2)/m_xSide;
-            const float y3 = static_cast<float>(i3-_imageHeight/2)/m_ySide;
-            const float z3 = rect[j][i3].z;
-
-            const float A = matrix3Determinant({y1, z1, 1, y2, z2, 1, y3, z3, 1});
-            const float B = matrix3Determinant({x1, z1, 1, x2, z2, 1, x3, z3, 1});
-            const float C = matrix3Determinant({x1, y1, 1, x2, y2, 1, x3, y3, 1});
-            const float D = matrix3Determinant({x1, y1, z1, x2, y2, z2, x3, y3, z3});
-
-            const float l = std::sqrt(A*A + B*B + C*C + D*D);
-
             float p = 0.f;
             switch (component)
             {
             case EComponents::x:
-                p = A/l;
+                p = m_rect[j][i].nx;
                 break;
             case EComponents::y:
-                p = B/l;
+                p = m_rect[j][i].ny;
                 break;
             case EComponents::z:
-                p = C/l;
+                p = m_rect[j][i].nz;
                 break;
             default:
                 break;
@@ -167,9 +164,11 @@ void FuncGraphsProvider::computeRect()
             const float x = static_cast<float>(j-_imageWidth/2)/m_xSide;
             const float y = static_cast<float>(i-_imageHeight/2)/m_ySide;
 
-            rect[j][i].z = rfunc(x, y);
+            m_rect[j][i].z = rfunc(x, y);
         }
     }
+
+    computeNormals();
 }
 
 void FuncGraphsProvider::computeNormals()
@@ -181,17 +180,17 @@ void FuncGraphsProvider::computeNormals()
         {
             const float x1 = static_cast<float>(j-_imageWidth/2)/m_xSide;
             const float y1 = static_cast<float>(i-_imageHeight/2)/m_ySide;
-            const float z1 = rect[j][i].z;
+            const float z1 = m_rect[j][i].z;
 
             const int j2 = j < (_imageWidth - 1) ? (j + 1) : (j - 1);
             const float x2 = static_cast<float>(j2-_imageWidth/2)/m_xSide;
             const float y2 = static_cast<float>(i-_imageHeight/2)/m_ySide;
-            const float z2 = rect[j2][i].z;
+            const float z2 = m_rect[j2][i].z;
 
             const int i3 = i < (_imageHeight - 1) ? (i + 1) : (i - 1);
             const float x3 = static_cast<float>(j-_imageWidth/2)/m_xSide;
             const float y3 = static_cast<float>(i3-_imageHeight/2)/m_ySide;
-            const float z3 = rect[j][i3].z;
+            const float z3 = m_rect[j][i3].z;
 
             const float A = matrix3Determinant({y1, z1, 1, y2, z2, 1, y3, z3, 1});
             const float B = matrix3Determinant({x1, z1, 1, x2, z2, 1, x3, z3, 1});
@@ -200,9 +199,9 @@ void FuncGraphsProvider::computeNormals()
 
             const float l = std::sqrt(A*A + B*B + C*C + D*D);
 
-            rect[j][i].nx /=l;
-            rect[j][i].ny /=l;
-            rect[j][i].nz /=l;
+            m_rect[j][i].nx =A/l;
+            m_rect[j][i].ny =B/l;
+            m_rect[j][i].nz =C/l;
         }
     }
 }

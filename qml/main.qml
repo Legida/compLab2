@@ -44,11 +44,55 @@ Window {
                 }
             }
         }
+
+        Button {
+            text: "next"
+
+            onClicked: {
+                if (root.current < names.length - 1) {
+                    root.current++
+                    firstP.providerName = root.names[root.current]
+                }
+            }
+        }
+
+        Row {
+            spacing: 3
+
+            SpinBox {
+                editable: true
+                id: r
+                to: 255
+                from: 0
+            }
+
+            SpinBox {
+                editable: true
+                id: g
+                to: 255
+                from: 0
+            }
+
+            SpinBox {
+                editable: true
+                id: b
+                to: 255
+                from: 0
+            }
+        }
+
+        Button {
+            text: "color"
+
+            onClicked: {
+                firstP.rgbColor = r.value + "," + g.value + "," + b.value
+            }
+        }
     }
 
     FolderDialog {
         id: fileDialog
-        onAccepted: buttonAdapter.saveClicked(selectedFolder)
+        onAccepted: handler.saveImage(firstP.providerName, selectedFolder)
     }
 
     MImage {

@@ -19,7 +19,7 @@ public:
     QImage requestImage(const QString& id, QSize* size, const QSize& requestedSize) override;
     QString getName() const;
 
-    Q_SLOT void saveImages(QString str);
+    void saveImages(QString str);
 
 private:
     enum class EComponents
@@ -48,10 +48,11 @@ private:
         float nz;
     };
 
-    std::vector<std::vector<info>> rect;
+    std::vector<std::vector<info>> m_rect;
     const int m_xSide;
     const int m_ySide;
     const QString m_name;
+    QString m_rgbColor;
 };
 
 #endif //FUNC_GRAPHS_PROVIDER
