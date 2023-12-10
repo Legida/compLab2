@@ -6,12 +6,9 @@
 #include "ProvidersHandler.h"
 
 #include <iostream>
+#include <thread>
 
-int main(int argc, char *argv[])
-{
-    QGuiApplication app(argc, argv);
-    QQmlApplicationEngine engine;
-
+void createImages(ProvidersHandler& handler) {
     //first image
     auto f1 = [](float x, float y) -> float {
         return 1-x/2-y/4;
@@ -37,29 +34,31 @@ int main(int argc, char *argv[])
     auto circles = euler::or_f(f4, f5);
     auto res = euler::or_f(std::move(triangle), std::move(circles));
 
-    FuncGraphsProvider provider1("provider1", 100, 100, res);
+    handler.addProvider(new FuncGraphsProvider("provider1", 100, 100, res));
 
     //second image
     auto res2 = [](float x, float y) -> float {
         return 1-(x-1)*(x-1)-y*y;
     };
 
-    FuncGraphsProvider provider2("provider2", 100, 100, res2);
+    handler.addProvider(new FuncGraphsProvider("provider2", 100, 100, res2));
 
     //third image
     auto res3 = [](float x, float y) -> float {
         return y - x;
     };
 
-    FuncGraphsProvider provider3("provider3", 100, 100, res3);
+    handler.addProvider(new FuncGraphsProvider("provider3", 100, 100, res3));
+}
+
+int main(int argc, char *argv[])
+{
+    QGuiApplication app(argc, argv);
+    QQmlApplicationEngine engine;
 
     ProvidersHandler handler(engine);
-    handler.addProvider(std::move(provider1));
-    handler.addProvider(std::move(provider2));
-    handler.addProvider(std::move(provider3));
 
-    //adapter + qml
-    engine.rootContext()->setContextProperty("handler", &handler);
+    std::thread th1([&handler] (){createImages(handler);});
 
     const QUrl url(u"qrc:/compLab2/qml/main.qml"_qs);
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
@@ -69,5 +68,9 @@ int main(int argc, char *argv[])
     }, Qt::QueuedConnection);
     engine.load(url);
 
-    return app.exec();
+    int execRes = app.exec();
+
+    th1.join();
+
+    return execRes;
 }

@@ -1,112 +1,50 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
-import QtQuick.Dialogs
 
 Window {
     id: root
 
-    property variant names: []
-    property int current: 0
-
     width: 640
     height: 480
-    visible: false
+    visible: true
     title: qsTr("Ранок?")
 
-    Row {
-        spacing: 10
+    ColumnLayout {
+        anchors.fill: parent
 
-        Button {
-            text: "save"
-
-            onClicked: fileDialog.open()
+        Header {
+            Layout.fillWidth: true
+            mImage: image
         }
 
-        Button {
-            text: "prev"
+        Item {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
 
-            onClicked: {
-                if (root.current > 0) {
-                    root.current--
-                    firstP.providerName = root.names[root.current]
+            MImage {
+                id: image
+                visible: false
+            }
+
+            LoadLabel {
+                anchors.fill: parent
+                id: label
+                visible: true
+            }
+
+            Connections {
+                target: handler
+                onProviderCountChanges: {
+                    if (providerCount > 0) {
+                        label.visible = false
+                        image.visible = true
+                        image.providerName = handler.getProvidersNames()[0]
+                        console.log("test")
+                    }
                 }
             }
-        }
-
-        Button {
-            text: "next"
-
-            onClicked: {
-                if (root.current < names.length - 1) {
-                    root.current++
-                    firstP.providerName = root.names[root.current]
-                }
-            }
-        }
-
-        Button {
-            text: "next"
-
-            onClicked: {
-                if (root.current < names.length - 1) {
-                    root.current++
-                    firstP.providerName = root.names[root.current]
-                }
-            }
-        }
-
-        Row {
-            spacing: 3
-
-            SpinBox {
-                editable: true
-                id: r
-                to: 255
-                from: 0
-            }
-
-            SpinBox {
-                editable: true
-                id: g
-                to: 255
-                from: 0
-            }
-
-            SpinBox {
-                editable: true
-                id: b
-                to: 255
-                from: 0
-            }
-        }
-
-        Button {
-            text: "color"
-
-            onClicked: {
-                firstP.rgbColor = r.value + "," + g.value + "," + b.value
-            }
-        }
-    }
-
-    FolderDialog {
-        id: fileDialog
-        onAccepted: handler.saveImage(firstP.providerName, selectedFolder)
-    }
-
-    MImage {
-        id: firstP
-    }
-
-    Component.onCompleted: {
-        root.names = handler.getProvidersNames()
-        if (names.length >= 1) {
-            firstP.providerName = root.names[0]
-            root.visible = true
-        }
-        else {
-            console.log("names.len == 0")
         }
     }
 }

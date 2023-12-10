@@ -29,6 +29,11 @@ qt_add_qml_module(appcompLab2
     QML_FILES
     qml/main.qml
     qml/MImage.qml
+    qml/LoadLabel.qml
+    qml/Header.qml
+
+    RESOURCES
+    resources/load.gif
 )
 
 set_target_properties(appcompLab2 PROPERTIES

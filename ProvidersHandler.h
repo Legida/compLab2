@@ -17,15 +17,16 @@ class ProvidersHandler : public QObject
 public:
     ProvidersHandler(QQmlApplicationEngine& engine);
 
-    void addProvider(FuncGraphsProvider&& provider);
+    void addProvider(QPointer<FuncGraphsProvider> provider);
 
     Q_INVOKABLE QStringList getProvidersNames();
 
+    Q_SIGNAL void providerCountChanges(int providerCount);
     Q_SLOT void saveImage(const QString& providerName, const QString& path);
 
 private:
     QQmlApplicationEngine& m_engine;
-    std::list<FuncGraphsProvider> m_providers;
+    std::list<QPointer<FuncGraphsProvider>> m_providers;
 };
 
 #endif //PROVIDER_HANDLER
